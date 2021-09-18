@@ -1,7 +1,9 @@
 import contextlib
 import math
 import time
+import re
 from pathlib import Path
+import urllib.request
 
 from typing import MutableMapping
 
@@ -47,10 +49,35 @@ class PlayerCommands(MixinMeta, metaclass=CompositeMetaClass):
         if restrict and self.match_url(str(query)):
             valid_url = self.is_url_allowed(str(query))
             if not valid_url:
-                return await self.send_embed_msg(
-                    ctx,
-                    title=_("Unable To Play Tracks"),
-                    description=_("That URL is not allowed."),
+                # If it is a bandcamp page with a custom domain (not bandcamp.com),
+                # try and webscrape for the original bandcamp url and use that
+                find_bandcamp_url = False
+                try:
+                    with urllib.request.urlopen(str(query)) as f:
+                        # Decode HTML to utf-string
+                        resp = f.read().decode('utf-8')
+                        # Get the index of 'og:url"'
+                        ind = resp.index("og:url\"")
+                        # If found
+                        if ind > -1:
+                            # Get the index of the closing tag
+                            end_ind = resp.index(">", ind)
+                            if end_ind > -1:
+                                # Split '<meta property="og:url"' and 'content="<bandcamp url>">' using 're' library
+                                # and get the content side
+                                content = re.split(' +', resp[ind:end_ind])[1]
+                                # Refine to get only the new bandcamp url
+                                bandcamp_url = content[content.index("\"") + 1:-1]
+                                # Recreate the query with the new url
+                                query = Query.process_input(bandcamp_url, self.local_folder_current_path)
+                                find_bandcamp_url = True
+                except Exception as e:
+                    find_bandcamp_url = False
+                if not find_bandcamp_url:
+                    return await self.send_embed_msg(
+                        ctx,
+                        title=_("Unable To Play Tracks"),
+                        description=_("That URL is not allowed."),
                 )
         elif not await self.is_query_allowed(self.config, ctx, f"{query}", query_obj=query):
             return await self.send_embed_msg(
