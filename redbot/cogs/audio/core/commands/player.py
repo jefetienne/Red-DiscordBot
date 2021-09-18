@@ -55,9 +55,9 @@ class PlayerCommands(MixinMeta, metaclass=CompositeMetaClass):
                 try:
                     with urllib.request.urlopen(str(query)) as f:
                         # Decode HTML to utf-string
-                        resp = f.read().decode('utf-8')
+                        resp = f.read().decode("utf-8")
                         # Get the index of 'og:url"'
-                        ind = resp.index("og:url\"")
+                        ind = resp.index('og:url"')
                         # If found
                         if ind > -1:
                             # Get the index of the closing tag
@@ -65,11 +65,13 @@ class PlayerCommands(MixinMeta, metaclass=CompositeMetaClass):
                             if end_ind > -1:
                                 # Split '<meta property="og:url"' and 'content="<bandcamp url>">' using 're' library
                                 # and get the content side
-                                content = re.split(' +', resp[ind:end_ind])[1]
+                                content = re.split(" +", resp[ind:end_ind])[1]
                                 # Refine to get only the new bandcamp url
-                                bandcamp_url = content[content.index("\"") + 1:-1]
+                                bandcamp_url = content[content.index('"') + 1 : -1]
                                 # Recreate the query with the new url
-                                query = Query.process_input(bandcamp_url, self.local_folder_current_path)
+                                query = Query.process_input(
+                                    bandcamp_url, self.local_folder_current_path
+                                )
                                 find_bandcamp_url = True
                 except Exception as e:
                     find_bandcamp_url = False
@@ -78,7 +80,7 @@ class PlayerCommands(MixinMeta, metaclass=CompositeMetaClass):
                         ctx,
                         title=_("Unable To Play Tracks"),
                         description=_("That URL is not allowed."),
-                )
+                    )
         elif not await self.is_query_allowed(self.config, ctx, f"{query}", query_obj=query):
             return await self.send_embed_msg(
                 ctx, title=_("Unable To Play Tracks"), description=_("That track is not allowed.")
